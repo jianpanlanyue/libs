@@ -5,6 +5,9 @@
 #endif
 
 #include "../based/headers_dependency.h"
+#if defined(WIN32) && !defined(_WINSOCKAPI_)
+	#define __LCC__
+#endif
 #include <mysql.h>
 #pragma comment(lib,"libmysql.lib")
 
