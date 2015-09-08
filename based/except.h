@@ -177,7 +177,7 @@ namespace based
 		}
 
 	private:
-		//1初始化成功，防止release下优化掉logger_init	//2初始化成功，且是被logger_init初始化，方式析构时释放别的模块正在使用的glog引擎
+		//1初始化成功，防止release下优化掉logger_init	//2初始化成功，且是被logger_init初始化，防止析构时释放别的模块正在使用的glog引擎
 		int init_status_;
 	};
 	#endif
