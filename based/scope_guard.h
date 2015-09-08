@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+#endif
+
 #include "headers_dependency.h"
 #include "def.h"
 

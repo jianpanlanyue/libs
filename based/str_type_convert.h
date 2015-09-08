@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+#endif
+
 #include "headers_dependency.h"
 
 namespace based
@@ -17,27 +21,13 @@ namespace based
 		template<typename T>
 		bool to_type(T& dest, const char* src, unsigned long src_length=0)
 		{
-			if (src_length == 0)
-				if ((src_length = strlen(src)) == 0)
-				{
-					dest = T{};
-					return false;
-				}
+			if (src == NULL || (src_length == 0 && (src_length = strlen(src)) == 0))
+			{
+				dest = T{};
+				return false;
+			}
 
 			return _to_type(dest, src, src_length),true;
-		}
-
-		template<typename T>
-		bool to_type(T* dest, const char* src, unsigned long src_length=0)
-		{
-			if (src_length == 0)
-				if ((src_length = strlen(src)) == 0)
-				{
-					dest = T{};
-					return false;
-				}
-
-			return _to_type(dest, src, src_length), true;
 		}
 		
 		//对于字符串性质的被转换目标，转换后是否追加引号（单引号或双引号）
@@ -53,16 +43,16 @@ namespace based
 			return _to_str(src);
 		}
 
-		//to_str的指针偏特化版，当p为指针类型时，优先匹配
+		//to_str的指针偏特化版，当src为指针类型时，优先匹配
 		template<typename T>
-		char_array_type to_str(T* p, int len = sizeof(size_t))
+		char_array_type to_str(T* src, int len = sizeof(size_t))
 		{
 			char_array_type str;
-			sprintf_s((char*)&str, sizeof(str), "0x%08X", p);
+			sprintf_s((char*)&str, sizeof(str), "0x%08X", src);
 			return str;
 		}
 
-		//to_str的字符串指针特化版，当p为字符串指针时，优先匹配
+		//to_str的字符串指针特化版，当src为字符串指针时，优先匹配
 		const char* to_str(char* src, int src_len = 0)
 		{
 			static int buf_len = 256;

@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+#endif
+
 #include "headers_dependency.h"
 
 namespace based
@@ -22,10 +26,11 @@ namespace based
 			}
 		}
 
+	#ifdef WIN32
 		wchar_t* chars_to_wchars(const char* chars, int chars_bytes = 0)
 		{
-			if (chars_bytes == 0)
-				chars_bytes = strlen(chars);
+			if (chars_bytes==0 && (chars_bytes=strlen(chars))==0)
+				return L"";
 
 			words_converted_ = MultiByteToWideChar(CP_ACP, 0, chars, chars_bytes, NULL, 0);
 			if (words_converted_ == 0)
@@ -41,8 +46,8 @@ namespace based
 
 		char* wchars_to_chars(const wchar_t* wchars, int wchars_words = 0)
 		{
-			if (wchars_words == 0)
-				wchars_words = wcslen(wchars);
+			if (wchars_words==0 && (wchars_words=wcslen(wchars))==0)
+				return "";
 
 			bytes_converted_ = WideCharToMultiByte(CP_ACP, 0, wchars, wchars_words, NULL, 0, NULL, NULL);
 			if(bytes_converted_ == 0)
@@ -58,8 +63,8 @@ namespace based
 
 		wchar_t* utf8_to_wchars(const char* utf8, int utf8_bytes = 0)
 		{
-			if (utf8_bytes == 0)
-				utf8_bytes = strlen(utf8);
+			if (utf8_bytes==0 && (utf8_bytes=strlen(utf8))==0)
+				return L"";
 
 			words_converted_ = ::MultiByteToWideChar(CP_UTF8, NULL, utf8, utf8_bytes, NULL, 0);
 			if(words_converted_ == 0)
@@ -75,8 +80,8 @@ namespace based
 
 		char* wchars_to_utf8(const wchar_t* wchars, int wchars_words = 0)
 		{
-			if (wchars_words == 0)
-				wchars_words = wcslen(wchars);
+			if (wchars_words==0 && (wchars_words=wcslen(wchars))==0)
+				return "";
 
 			bytes_converted_ = ::WideCharToMultiByte(CP_UTF8, NULL, wchars, wchars_words, NULL, 0, NULL, NULL);
 			if (bytes_converted_ == 0)
@@ -89,11 +94,12 @@ namespace based
 			char_buf_[bytes_converted_++] = '\0';
 			return char_buf_;
 		}
+	#endif
 
 		char* chars_to_utf8(const char* chars, int chars_bytes = 0)
 		{
-			if (chars_bytes == 0)
-				chars_bytes = strlen(chars);
+			if (chars_bytes==0 && (chars_bytes=strlen(chars))==0)
+				return "";
 
 			wchar_t* wchars = chars_to_wchars(chars, chars_bytes);
 			return wchars_to_utf8(wchars, words_converted_);
@@ -101,8 +107,8 @@ namespace based
 		
 		char* utf8_to_chars(const char* utf8, int u8_bytes = 0)
 		{
-			if (u8_bytes == 0)
-				u8_bytes = strlen(utf8);
+			if (u8_bytes==0 && (u8_bytes=strlen(utf8))==0)
+				return "";
 
 			wchar_t* wchars = utf8_to_wchars(utf8, u8_bytes);
 			return wchars_to_chars(wchars,bytes_converted_);
