@@ -25,10 +25,10 @@
 #include "strngs.h"
 #include "baseapi.h"
 
-#include "E:\\CppProject\\sharedproject\\based\\string_more.h"
-#include "E:\\CppProject\\sharedproject\\based\\charset_convert.h"
-#include "E:\\CppProject\\sharedproject\\based\\except.h"
-#include "E:\\CppProject\\sharedproject\\based\\scope_guard.h"
+#include "../based/string_more.h"
+#include "../based/charset_convert.h"
+#include "../based/except.h"
+#include "../based/scope_guard.h"
 
 #ifdef DEBUG_SHOW_IMG
 	#define SHOW_IMG(IMG_WINDOW_NAME,IMG_NAME)		cvShowImage(IMG_WINDOW_NAME, IMG_NAME)

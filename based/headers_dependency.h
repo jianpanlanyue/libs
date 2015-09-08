@@ -1,12 +1,13 @@
 #pragma once
 
 //based下的功能文件经常使用到的库头文件
+#ifdef WIN32
+	#include <windows.h>
+	#include<Shlwapi.h>
+	#pragma comment(lib,"Shlwapi.lib")
+#endif
 
-#include <windows.h>
 #include <assert.h>
-#include<Shlwapi.h>
-#pragma comment(lib,"Shlwapi.lib")
-
 #include <iostream>
 #include <string>
 #include <ctime>

@@ -7,9 +7,11 @@
 #include "headers_dependency.h"
 #include "str_type_convert.h"
 #include "os.h"
-#include <crtdbg.h>
-#include <DbgHelp.h>
-#pragma comment(lib,"DbgHelp.lib")
+#ifdef WIN32
+	#include <crtdbg.h>
+	#include <DbgHelp.h>
+	#pragma comment(lib,"DbgHelp.lib")
+#endif
 
 #if defined(ENSURE_ENABLE_LOG)
 	#define GLOG_NO_ABBREVIATED_SEVERITIES
