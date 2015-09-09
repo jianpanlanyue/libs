@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+	#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
 #endif
 
 #include "../based/headers_dependency.h"
@@ -89,6 +89,8 @@ namespace sqler
 		std::vector<std::pair<bool, MYSQL>> pool_;			//bool表示是否已被占用
 		HANDLE semaphore_;
 		CRITICAL_SECTION critical_section_;
+	#else
+		#error "Please add corresponding platform's code to ensure the directory exists."
 	#endif
 	};
 }

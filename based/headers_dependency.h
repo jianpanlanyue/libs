@@ -17,3 +17,4 @@
 #include <functional>
 #include <mutex>
 #include <exception>
+#include <algorithm>

@@ -1,12 +1,18 @@
+//这是一个异常工具库，可以大幅加快项目工程的开发进度，以及保证代码的安全性。
+//通过使用ENSURE宏，我们在开发过程中，可以将主要精力放在逻辑的编写，而不用再担心错误何时发生，发生后要不要处理，处理的话，是用返回值还是异常，用返回值的话层层回传等等。。
+//现在只在可能会出错的地方，加一句ENSURE，当出错时，会自动抛出异常，并打印消息或日志，里面带有出错的变量名和出错时的值。在相应的地方捕获即可。
+//如果定义了ENSURE_ENABLE_LOG，会以glog为日志引擎，打印日志。
+//可以配合SCOPE_GUARD使用，参见demo。
+
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+	#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
 #endif
 
 #include "headers_dependency.h"
 #include "str_type_convert.h"
-#include "os.h"
+
 #ifdef WIN32
 	#include <crtdbg.h>
 	#include <DbgHelp.h>
@@ -16,13 +22,9 @@
 #if defined(ENSURE_ENABLE_LOG)
 	#define GLOG_NO_ABBREVIATED_SEVERITIES
 	#define GOOGLE_GLOG_DLL_DECL
-	#include "../../../../sharedproject/glog-0.3.3/src/windows/glog/logging.h"
-	#include "../../../../sharedproject/glog-0.3.3/src/windows/glog/log_severity.h"
-	#ifdef _DEBUG
-		#pragma comment(lib,"../../../../sharedproject/glog-0.3.3/vsprojects/libglog_static/Debug/libglog_static.lib")
-	#else
-		#pragma comment(lib,"../../../../sharedproject/glog-0.3.3/vsprojects/libglog_static/Release/libglog_static.lib")
-	#endif
+	#include <glog/logging.h>
+	#include <glog/log_severity.h>
+	#pragma comment(lib,"libglog_static.lib")
 	namespace google { namespace glog_internal_namespace_ { bool IsGoogleLoggingInitialized(); } }
 #endif
 
@@ -55,15 +57,9 @@ namespace based
 			std::exception((std::string("Exception in ") + file_name + ", line " + std::to_string(file_line) + ":\n" + except_info).c_str())
 		{};
 
-		bool operator == (const except& right)
-		{
-			return except_no_ == right.except_no_;
-		}
+		bool operator == (const except& right) { return except_no_ == right.except_no_; }
 
-		int no()
-		{
-			return except_no_;
-		}
+		int no(){ return except_no_; }
 
 	protected:
 		int except_no_;
@@ -136,8 +132,12 @@ namespace based
 				return;
 			}
 		
-			std::string exe_path = os::get_exe_path_without_backslash<char>();
-			FLAGS_log_dir = exe_path + "\\logs";
+			char exe_path[MAX_PATH];
+			GetModuleFileNameA(NULL,exe_path,MAX_PATH);
+			PathRemoveFileSpecA(exe_path);
+			strcat_s(exe_path, "\\logs");
+			FLAGS_log_dir = exe_path;
+
 		#ifdef WIN32
 			if (!CreateDirectoryA(FLAGS_log_dir.c_str(), NULL))
 			{
@@ -150,9 +150,13 @@ namespace based
 				#endif
 				}
 			}
+		#else
+			#error "Please add corresponding platform's code to ensure the directory exists."
 		#endif
+
 			FLAGS_stop_logging_if_full_disk = true;
-			google::InitGoogleLogging(os::get_exe_path<char>().c_str());
+			GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+			google::InitGoogleLogging(exe_path);
 
 			init_status_ = 2;
 		}
@@ -192,12 +196,13 @@ namespace based
 		{
 			value_info_.reserve(ENSURE_VALUE_INFO_LENGTH);
 			type_conv_.set_quote_when_characters_to_str('\"');
+			had_save_value = false;
 		}
 
 		ensure& set_context(const char* file_name, int line, const char* expression_name)
 		{
 			value_info_ = value_info_ + "Ensure failed in " + file_name + ", line "+ 
-				type_conv_.pointer_of_str(type_conv_.to_str(line)) + ":\nExpression: " + expression_name + "\nValues:";
+				type_conv_.to_str(line) + ":\nExpression: " + expression_name + "\nValues:";
 
 			return *this;
 		}
@@ -205,35 +210,56 @@ namespace based
 		template<typename T>
 		ensure& save_value(const char* value_name, T&& value)
 		{
-			value_info_ = value_info_ + value_name + " = " + type_conv_.pointer_of_str(type_conv_.to_str(value)) + "\n";
+			had_save_value = true;
+			value_info_ = value_info_ + "\t" + value_name + " = " + type_conv_.to_str(value) + "\n";
 			return *this;
 		}
 
 		//追加更多的提示信息到value_info_
-		ensure& tips(const char* more_tips)
+		ensure& more(const char* more_tips)
 		{
 			value_info_ = value_info_ + "More tips: "+more_tips + "\n\n";
-
 			return *this;
 		}
 
 		//以info级别结束：显示并返回info信息
-		std::string info()
+		std::string info(int error_no = -1, const char* more_tips=nullptr)
 		{
+			if (!had_save_value)
+				value_info_ += "\n";
+			value_info_ = value_info_+"Error No: error_no is " + std::to_string(error_no) + "\n";
+
+			if(more_tips != nullptr)
+				more(more_tips);
+
 			std::cout << value_info_.c_str();
 			return value_info_;
 		}
 
 		//以error级别结束：显示信息，抛出异常
-		void warn(int error_no = -1)
+		void warn(int error_no = -1, const char* more_tips= nullptr)
 		{
+			if (!had_save_value)
+				value_info_ += "\n";
+			value_info_ = value_info_ + "Error No: error_no is " + std::to_string(error_no) + "\n";
+
+			if (more_tips != nullptr)
+				more(more_tips);
+
 			std::cout << value_info_.c_str();
 			throw except(error_no, value_info_.c_str());
 		}
 
 		//以error级别结束：记录日志，可选择的弹出断言失败对话框，抛出异常，
-		void error(int error_no = -1)
+		void error(int error_no = -1, const char* more_tips= nullptr)
 		{
+			if (!had_save_value)
+				value_info_ += "\n";
+			value_info_ = value_info_ + "Error No: error_no is " + std::to_string(error_no) + "\n";
+
+			if (more_tips != nullptr)
+				more(more_tips);
+
 		#if defined(ENSURE_ENABLE_LOG)
 			if (logger_init::get_glog().get_init_status() != 0)
 				LOG(ERROR) << value_info_;
@@ -247,7 +273,7 @@ namespace based
 		}
 
 		//以fatal级别结束：生成minidump，并结束执行。有待完善
-		void fatal(int error_no = 0)
+		void fatal(int error_no = -1)
 		{
 			exit(error_no);
 		}
@@ -257,6 +283,7 @@ namespace based
 		ensure& SET_INFO_B;
 		str_type_convert type_conv_;
 		std::string value_info_;
+		bool had_save_value;
 	};
 }
 
@@ -268,26 +295,45 @@ namespace based
 	if(!(expression))				\
 		based::ensure().set_context(__FILE__,__LINE__,#expression).SET_INFO_A
 
-#define ENSURE_WIN32(expression)	ENSURE(expression)(GetLastError())
+#ifdef WIN32
+	#define ENSURE_WIN32(expression)	ENSURE(expression)(GetLastError())
+#else
+	#define ENSURE_WIN32(expression)	ENSURE(expression)
+#endif
 
 
-//example:
-// int main()
-// {
-// 	try
-// 	{
-// 		//do something...
-// 		//...
-// 		FILE* file1 = fopen("c:\\a", "r");
-// 		FILE* file2 = fopen("d:\\a", "r");
-// 		ENSURE(file1 != NULL && file2 != NULL)(file1)(file2)(errno).tips("can't find file..").error();
-//		//...
-// 		//char buf[10];
-// 		//fread(buf,1,3,file1);
-// 		//...
-// 	}
-// 	catch (std::exception& e)
-// 	{
-// 		std::cout << e.what();
-// 	}
-// }
+
+////example:
+//#include "E:/CppProject/sharedproject/based/scope_guard.h"
+//#include "E:/CppProject/sharedproject/based/except.h"
+//int main()
+//{
+//	try
+//	{
+//		int len = 10;
+//		char* buf = new char[len];
+//		SCOPE_GUARD([&] { delete[] buf; });								//退出作用域时，释放内存
+//
+//		FILE* file1 = fopen("c:\\a", "r");
+//		ENSURE(file1 != NULL)(file1).warn(errno, "can't open file a.");		//断言错误时，打印详情，并以warn级别结束
+//		SCOPE_GUARD([&] { fclose(file1); });								//顺利通过ENSURE，表示file1有效。 退出作用域时，关闭file1
+//
+//																			//读取失败导致返回逻辑上需要退出时，无需考虑释放buf、关闭文件file1，它们会被自动清理。
+//		ENSURE(fread(buf, 1, len, file1) == len).warn(errno, "read file a error.");
+//
+//		FILE* file2 = fopen("c:\\b", "w");
+//		ENSURE(file2 != NULL)(file2).error(errno, "can't open file b.");	//断言错误时，打印详情，并以error级别结束
+//		SCOPE_GUARD([&] { fclose(file2); });							//顺利通过ENSURE，表示file2有效。 退出作用域时，关闭file2
+//
+//																		//写入失败导致返回逻辑上需要退出时，无需考虑释放buf、关闭文件file1、file2，它们会被自动清理。
+//		ENSURE(fwrite(buf, 1, len, file2) == len).warn(errno, "write file b error.");
+//
+//		//继续其他更复杂的逻辑
+//		//......
+//	}
+//	catch (std::exception& e)
+//	{
+//	}
+//
+//	return 0;
+//}

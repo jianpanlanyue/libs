@@ -1,7 +1,11 @@
+//这是一个字符集转换的类。
+//提供：char<>wchar,char<>uft8， wchar<>utf8 的转换。
+//类内部保存了一块临时缓冲区。下次转换时，如果能够提供足够空间，则直接复用；否则分配更大的空间，以后继续复用。
+
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+	#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
 #endif
 
 #include "headers_dependency.h"
@@ -94,6 +98,8 @@ namespace based
 			char_buf_[bytes_converted_++] = '\0';
 			return char_buf_;
 		}
+	#else
+		#error "Please add corresponding platform's code."
 	#endif
 
 		char* chars_to_utf8(const char* chars, int chars_bytes = 0)
@@ -196,6 +202,7 @@ namespace based
 
 
 //example:
+// #include "charset_convert.h"
 // int main()
 // {
 // 	based::charset_convert conv;

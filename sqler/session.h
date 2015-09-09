@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+	#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
 #endif
 
 #include "../based/headers_all.h"
@@ -25,7 +25,7 @@ namespace sqler
 				if (init_state())
 					return;
 
-				ENSURE(mysql_library_init(0,NULL,NULL) == 0).tips("mysql lib init fail").warn(-1);
+				ENSURE(mysql_library_init(0,NULL,NULL) == 0).warn(-1, "mysql lib init fail");
 
 				init_state() = true;
 			}
@@ -100,7 +100,7 @@ namespace sqler
 		//取列的数目
 		unsigned get_field_count()
 		{
-			ENSURE(my_sql_ != NULL).tips("be sure successfully connect to database first").warn(-1);
+			ENSURE(my_sql_ != NULL).warn(-1, "be sure successfully connect to database first");
 			return mysql_field_count(my_sql_);
 		}
 
@@ -120,7 +120,7 @@ namespace sqler
 		void open(const char* host, unsigned port, const char* user, const char* passwd, const char* database, 
 			unsigned long client_flag = CLIENT_MULTI_STATEMENTS | CLIENT_REMEMBER_OPTIONS)
 		{
-			ENSURE(mysql_real_connect(my_sql_, host, user, passwd, database, port, NULL, client_flag) != NULL).tips(get_error_msg()).warn(get_error_no());
+			ENSURE(mysql_real_connect(my_sql_, host, user, passwd, database, port, NULL, client_flag) != NULL).warn(get_error_no(), get_error_msg());
 		}
 		
 		void set_option(const int option_type, const char* option_value_ptr)
@@ -144,7 +144,7 @@ namespace sqler
 			formated_sql.reserve(256);
 			format_sql_str(formated_sql, 0, args...);
 
-			ENSURE(mysql_real_query(my_sql_, formated_sql.c_str(), formated_sql.size()) == 0)(formated_sql).tips(get_error_msg()).warn(get_error_no());
+			ENSURE(mysql_real_query(my_sql_, formated_sql.c_str(), formated_sql.size()) == 0)(formated_sql).warn(get_error_no(), get_error_msg());
 
 			return next_result();
 		}
@@ -172,7 +172,7 @@ namespace sqler
 			if (res_ == NULL)
 			{
 				unsigned error_no = get_error_no();
-				ENSURE(error_no == 0).tips(get_error_msg()).warn(error_no);	//之前的sql语句产生结果集，但store result 发生错误
+				ENSURE(error_no == 0).warn(error_no, get_error_msg());	//之前的sql语句产生结果集，但store result 发生错误
 
 				return 0;														//之前的sql语句不产生结果集
 			}
@@ -199,7 +199,7 @@ namespace sqler
 				has_next_result_ = false;
 				res_ = mysql_store_result(my_sql_);
 				free_former_result();
-			} ;
+			}
 
 			has_next_result_ = true;						//复位has_next_result_，假设后续的query会有结果集
 		}
@@ -209,14 +209,14 @@ namespace sqler
 		template<typename... Args>
 		bool fetch_row(Args&... args)
 		{
-			ENSURE(res_ != NULL).tips("be sure to successfully store result first").warn(-1);
+			ENSURE(res_ != NULL).warn(-1, "be sure to successfully store result first");
 
 			MYSQL_ROW row = mysql_fetch_row(res_);
 			if (row == NULL)								//res_里的结果集已取完
 				return false;
 
 			unsigned long* field_length = mysql_fetch_lengths(res_);
-			ENSURE(field_length != NULL).tips(get_error_msg()).warn(get_error_no());
+			ENSURE(field_length != NULL).warn(get_error_no(), get_error_msg());
 
 			_fetch_row(row, 0, field_length, args...);
 
@@ -271,14 +271,14 @@ namespace sqler
 		void format_sql_str(std::string& sql_str, int last_read_pos, const Arg& arg)
 		{
 			size_t pos = sql_str.find("?", last_read_pos);
-			ENSURE(pos != sql_str.npos)(sql_str).tips("placeholders' count in sql str not compatiable with real parameters").warn(-1);
+			ENSURE(pos != sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
 
-			const char* sql_param = type_conv_.pointer_of_str(type_conv_.to_str(arg));
+			const char* sql_param = type_conv_.to_str(arg);
 			sql_str.replace(pos, 1, sql_param);
 			pos += strlen(sql_param);
 
 			//至此，arg...全部替换完成，如果还有'?'，则'?'和arg...的个数不一致
-			ENSURE(sql_str.find("?", pos) == sql_str.npos)(sql_str).tips("placeholders' count in sql str not compatiable with real parameters").warn(-1);
+			ENSURE(sql_str.find("?", pos) == sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
 		}
 
 
@@ -289,9 +289,9 @@ namespace sqler
 		void format_sql_str(std::string& sql_str, int last_read_pos, const Arg& arg, const Args&... args)
 		{
 			size_t pos = sql_str.find("?", last_read_pos);
-			ENSURE(pos != sql_str.npos)(sql_str).tips("placeholders' count in sql str not compatiable with real parameters").warn(-1);
+			ENSURE(pos != sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
 
-			const char* sql_param = type_conv_.pointer_of_str(type_conv_.to_str(arg));
+			const char* sql_param = type_conv_.to_str(arg);
 			sql_str.replace(pos, 1, sql_param);
 			pos += strlen(sql_param);				
 
@@ -310,6 +310,7 @@ namespace sqler
 }
 
 //演示：
+//#include "session.h"
 //int main()
 //{
 //	sqler::session s;

@@ -1,7 +1,10 @@
+//这是一个字符串操作的功能增强类。 补充std::string部分功能的缺失。
+//
+
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
+	#error "Compiler need to support c++11, please use vs2013 or above, vs2015 e.g."
 #endif
 
 #include "headers_dependency.h"
@@ -32,6 +35,7 @@ namespace based
 }
 
 //example:
+//#include "string_more.h"
 // int main()
 // {
 // 	std::wstring str = L"ab \n ";

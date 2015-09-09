@@ -1,7 +1,7 @@
 //这是一个验证码识别类，提供了多种验证码图片处理策略。 每个策略方法可以提供不同与默认参数的其他参数，多个方法也可以自由组合，以实现更好的图片处理效果。
 //部分图像处理基于opencv，提取出的字符图片校正后，交由tesseract-ocr识别。
 //do_recognize方法是一个自带的demo，组合了灰度化、自动阈值分割、滤波、去边框、字符分割、字符校正、字符重组等策略，然后将处理好的图片交给ocr进行识别。
-//使用者可以根据图片的特性，指定合适的策略，将图片上的文字最大清晰化。
+//使用者可以根据图片的特性，选择合适的策略，将图片上的文字最大清晰化。
 //提供截屏功能。
 //对前景与背景对比度大、不粘连的英文，分割与校正的处理效果比较好；但字符粘连的，由于时间比较紧，还没提供粘连字符分割的方法，后续会完善。
 //中文的需要修改类中的ocr方法，以切换为中文识别。由于验证码中的中文字符很多是变形的，即使能用各种方法将字符分离出来，
@@ -25,10 +25,7 @@
 #include "strngs.h"
 #include "baseapi.h"
 
-#include "../based/string_more.h"
-#include "../based/charset_convert.h"
-#include "../based/except.h"
-#include "../based/scope_guard.h"
+#include "../based/headers_all.h"
 
 #ifdef DEBUG_SHOW_IMG
 	#define SHOW_IMG(IMG_WINDOW_NAME,IMG_NAME)		cvShowImage(IMG_WINDOW_NAME, IMG_NAME)
@@ -48,7 +45,7 @@ public:
 
 		//加载图像
 		IplImage *img = cvLoadImage(filename);
-		ENSURE(img && img->imageData)(img)(img->imageData).warn();
+		ENSURE(img && img->imageData)(img).warn();
 		SCOPE_GUARD([&] {cvReleaseImage(&img);});
 
 		//转灰度图
@@ -115,9 +112,10 @@ public:
 		return final_str;
 	}
 
-	//截屏。start_x,start_y要截取的起始坐标，end_x，end_y要截取的终止坐标。坐标都是相对于屏幕左上角（左上角坐标0，0）。返回截屏后的IplImage结构，需调用者释放。
-	IplImage* copy_screen(int start_x, int start_y, int end_x, int end_y)
+	//截屏，保存截取的图片到save_full_path（需带扩展名）中。start_x,start_y要截取的起始坐标，end_x，end_y要截取的终止坐标。坐标都是相对于屏幕左上角（左上角坐标0，0）。
+	void copy_screen(const char* save_full_path, int start_x, int start_y, int end_x, int end_y)
 	{
+	#ifdef WIN32
 		HDC dc_screen = ::GetDC(NULL);
 		ENSURE_WIN32(dc_screen != NULL).warn();
 		SCOPE_GUARD([&] { ReleaseDC(NULL,dc_screen); });
@@ -153,6 +151,8 @@ public:
 		ENSURE_WIN32(GetDIBits(dc_mem, comp_bmp, 0, bih.biHeight, bmp_data, (BITMAPINFO*)&bih, DIB_RGB_COLORS) != 0).warn();
 
 		IplImage* dst = cvCreateImage(cvSize(bih.biWidth,bih.biHeight),IPL_DEPTH_8U,4);
+		SCOPE_GUARD([&] { cvReleaseImage(&dst); });
+
 		for (int i = 0;i < bih.biHeight;i++)
 			for (int j = 0;j < bih.biWidth;j++)
 			{
@@ -162,14 +162,20 @@ public:
 				dst->imageData[i*line_bytes + j * 4 + 3] = bmp_data[(bih.biHeight-i-1)*line_bytes + j * 4 + 3];
 			}
 
-		SHOW_IMG("after copy screen",dst);
-		return dst;
+		std::string str_path = save_full_path;
+		std::replace(str_path.begin(), str_path.end(), '/', '\\');
+		str_path.erase(str_path.rfind('\\'));
+		based::os::make_dir_recursive(str_path.c_str());
+		cvSaveImage(save_full_path, dst);
+	#else
+		#error "Please add corresponding platform's code."
+	#endif
 	}
 
-	//截屏。start_x,start_y要截取的起始坐标，width，height要截取的宽度和高度。坐标相对于屏幕左上角（左上角坐标0，0）。返回截屏后的IplImage结构，需调用者释放。
-	IplImage* copy_screen(int start_x, int start_y, short width, short height)
+	//截屏，保存到save_full_path（需带扩展名）中。start_x,start_y要截取的起始坐标，width，height要截取的宽度和高度。坐标相对于屏幕左上角（左上角坐标0，0）。
+	void copy_screen(const char* save_full_path, int start_x, int start_y, short width, short height)
 	{
-		return copy_screen(start_x, start_y, start_x + width, start_y + height);
+		copy_screen(save_full_path, start_x, start_y, start_x + width, start_y + height);
 	}
 
 protected:
@@ -591,17 +597,15 @@ protected:
 };
 
 // example:
+// #include "img_recognize.h"
 // int main(int argc, char* argv[])
 // {
 // 	std::cout << "Please get ready,then press enter." << std::endl;
 // 	getchar();
 // 
 //  //验证码在屏幕中的起始位置（相对与屏幕左上角，其中，左上角坐标为0，0）：600,374，宽度为413，高度为120
-// 	IplImage* screen_img = img_recognize().copy_screen(600, 374, (short)413, (short)120);
-//  SCOPE_GUARD([&]{ cvReleaseImage(&screen_img); });
-//
 // 	std::string& screen_save_path = based::os::get_exe_path_without_backslash<char>() + "\\copy_screen.bmp";
-// 	cvSaveImage(screen_save_path.c_str(), screen_img);
+// 	img_recognize().copy_screen(screen_save_path.c_str(),600, 374, (short)413, (short)120);
 // 	std::cout << img_recognize().do_recognize((char*)screen_save_path.c_str()) << std::endl;
 // 
 // 	cvWaitKey(0);
