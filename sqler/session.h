@@ -304,7 +304,7 @@ namespace sqler
 			format_sql_str(sql_str, pos, args...);
 		}
 
-	public:
+	protected:
 		based::str_type_convert type_conv_;
 		session_pool* sp_;
 		int index_in_pool_ = -1;

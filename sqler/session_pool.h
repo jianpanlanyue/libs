@@ -87,7 +87,7 @@ namespace sqler
 			ReleaseSemaphore(semaphore_, 1, NULL);
 		}
 
-	private:
+	protected:
 		std::vector<std::pair<bool, MYSQL>> pool_;			//bool表示是否已被占用
 		HANDLE semaphore_;
 		CRITICAL_SECTION critical_section_;
