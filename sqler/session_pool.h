@@ -1,3 +1,5 @@
+//数据库连接池。为session.h提供支持。
+
 #pragma once
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
