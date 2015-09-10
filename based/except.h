@@ -163,21 +163,21 @@ namespace based
 
 	public:
 		//单例之，使全局只有一份。C++11标准保证局部静态对象初始化的线程安全性。
-		static logger_init& get_glog()
+		static logger_init& get_logger()
 		{
 			static logger_init gi;
 			return gi;
+		}
+
+		int get_init_status()
+		{
+			return init_status_;
 		}
 
 		~logger_init()
 		{
 			if (init_status_ == 2 && google::glog_internal_namespace_::IsGoogleLoggingInitialized())
 				google::ShutdownGoogleLogging();
-		}
-
-		int get_init_status()
-		{
-			return init_status_;
 		}
 
 	private:
@@ -261,7 +261,7 @@ namespace based
 				more(more_tips);
 
 		#if defined(ENSURE_ENABLE_LOG)
-			if (logger_init::get_glog().get_init_status() != 0)
+			if (logger_init::get_logger().get_init_status() != 0)
 				LOG(ERROR) << value_info_;
 		#endif
 

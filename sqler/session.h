@@ -23,7 +23,7 @@ namespace sqler
 
 	class session
 	{
-	public:
+	protected:
 		struct mysql_lib_init
 		{
 			mysql_lib_init()
@@ -36,10 +36,10 @@ namespace sqler
 				init_state() = true;
 			}
 
-// 			~mysql_lib_init()
-// 			{
-// 				mysql_library_end();
-// 			}
+			~mysql_lib_init()
+			{
+				mysql_library_end();
+			}
 
 			bool& init_state()
 			{
@@ -53,7 +53,8 @@ namespace sqler
 			static mysql_lib_init dummy;
 			return dummy;
 		}
-		
+
+	public:
 		session()
 		{
 			//mysql_init()函数在第一次初始化的时候,不是线程安全的,但是之后是线程安全的。c++11标准规定，局部静态对象初始化是线程安全的，此处确保mysql_init安全调用一次。
@@ -229,15 +230,13 @@ namespace sqler
 			return true;
 		}
 
-
-	private:
+	protected:
 		void close()
 		{
 			if (my_sql_ != NULL)
 			{
 				free_all_result();
 				mysql_close(my_sql_);
-				mysql_library_end();
 			}
 		}
 
@@ -309,8 +308,8 @@ namespace sqler
 		session_pool* sp_;
 		int index_in_pool_ = -1;
 		bool not_destroy_ = false;
-		MYSQL* my_sql_ = NULL;
-		MYSQL_RES* res_ = NULL;
+		MYSQL* my_sql_ = nullptr;
+		MYSQL_RES* res_ = nullptr;
 		bool has_next_result_ = true;
 	};
 }
