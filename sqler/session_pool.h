@@ -7,7 +7,7 @@
 #endif
 
 #include "../based/headers_dependency.h"
-#if defined(WIN32) && !defined(_WINSOCKAPI_)
+#if defined(WIN32)
 	#define __LCC__
 #endif
 #include <mysql.h>

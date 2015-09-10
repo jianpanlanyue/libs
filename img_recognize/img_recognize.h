@@ -15,10 +15,10 @@
 #include <opencv2/opencv.hpp>
 #pragma warning(pop)
 #ifdef _DEBUG
-	#pragma comment(lib,"F:/opencv/opencv/build/x86/vc12/lib/opencv_world300d.lib")
-	#pragma  comment(lib,"libtesseract302.lib")
+	#pragma comment(lib,"opencv_world300d.lib")
+	#pragma  comment(lib,"libtesseract302d.lib")
 #else
-	#pragma comment(lib,"F:/opencv/opencv/build/x86/vc12/lib/opencv_world300.lib")
+	#pragma comment(lib,"opencv_world300.lib")
 	#pragma  comment(lib,"libtesseract302.lib")
 #endif
 

@@ -2,6 +2,7 @@
 
 //based下的功能文件经常使用到的库头文件
 #ifdef WIN32
+	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	#include<Shlwapi.h>
 	#pragma comment(lib,"Shlwapi.lib")
