@@ -474,10 +474,10 @@ protected:
 		int line_bytes = (width*src->nChannels + 3) / 4 * 4;
 		char* src_data = src->imageData;
 
-		double min_x = std::numeric_limits<double>::max();
-		double max_x = std::numeric_limits<double>::min();
-		double min_y = std::numeric_limits<double>::max();
-		double max_y = std::numeric_limits<double>::min();
+		double min_x = 99999999;
+		double max_x = -99999999;
+		double min_y = 99999999;
+		double max_y = -99999999;
 
 		for (int j = 0;j < height;j++)
 		{
@@ -513,7 +513,7 @@ protected:
 		int width = src->width;
 		int line_bytes = (width*src->nChannels + 3) / 4 * 4;
 		char* src_data = src->imageData;
-		double min_diagonal_len_2 = std::numeric_limits<double>::max();
+		double min_diagonal_len_2 = 9999999999;
 		int right_angle = 0;
 
 		for (int i = max_angle_left; i <= max_angle_right; i += 1)

@@ -62,6 +62,7 @@ namespace sqler
 			//mysql_init安全调用一次后，后续的mysql_init调用都是线程安全的。
 			//不对mysql_init直接传NULL，而用lib_init_dummy().init_state()的原因，1、此时!init_state一定是false 2、防止release下对lib_init_dummy的调用被优化掉
 			my_sql_ = mysql_init((MYSQL*)(!lib_init_dummy().init_state()));
+			ENSURE(my_sql_ != NULL).warn(-1, "Mysql init fail, maybe memory insufficient.");
 			type_conv_.set_quote_when_characters_to_str('\'');
 		}
 
@@ -70,7 +71,8 @@ namespace sqler
 			not_destroy_(lib_init_dummy().init_state())
 		{
 			//不对not_destroy_直接初始化为true，而用lib_init_dummy().init_state()的原因，1、此时init_state一定是true 2、防止release下对lib_init_dummy的调用被优化掉
-			mysql_init(my_sql_);
+			my_sql_ = mysql_init(my_sql_);
+			ENSURE(my_sql_ != NULL).warn(-1, "Mysql init fail, maybe memory insufficient.");
 			type_conv_.set_quote_when_characters_to_str('\'');
 		}
 
@@ -79,6 +81,7 @@ namespace sqler
 		{
 			index_in_pool_ = lib_init_dummy().init_state();			//给index_in_pool_赋值没有实际作用，只是防止release下对lib_init_dummy的调用被优化掉
 			my_sql_ = (sp_=sp)->get(&index_in_pool_, timeout_second);
+			ENSURE(my_sql_ != NULL).warn(-1, "Mysql init fail, maybe memory insufficient.");
 			type_conv_.set_quote_when_characters_to_str('\'');
 		}
 
@@ -108,7 +111,6 @@ namespace sqler
 		//取列的数目
 		unsigned get_field_count()
 		{
-			ENSURE(my_sql_ != NULL).warn(-1, "be sure successfully connect to database first");
 			return mysql_field_count(my_sql_);
 		}
 
@@ -309,8 +311,8 @@ namespace sqler
 		session_pool* sp_;
 		int index_in_pool_ = -1;
 		bool not_destroy_ = false;
-		MYSQL* my_sql_ = nullptr;
-		MYSQL_RES* res_ = nullptr;
+		MYSQL* my_sql_ = NULL;
+		MYSQL_RES* res_ = NULL;
 		bool has_next_result_ = true;
 	};
 }

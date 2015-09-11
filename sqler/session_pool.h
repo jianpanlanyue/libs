@@ -75,7 +75,7 @@ namespace sqler
 			LeaveCriticalSection(&critical_section_);
 
 			*index = i;
-			return assert(mysql), mysql;
+			return mysql;
 		}
 
 		void release(int ele_pos)

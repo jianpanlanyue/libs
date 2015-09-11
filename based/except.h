@@ -169,6 +169,7 @@ namespace based
 			return gi;
 		}
 
+		//成功初始化返回非0值，失败返回0.
 		int get_init_status()
 		{
 			return init_status_;
