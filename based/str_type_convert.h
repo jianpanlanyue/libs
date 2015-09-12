@@ -71,9 +71,21 @@ namespace based
 		}
 
 		template<> 
-		void _to_type(unsigned& dest, const char* src, unsigned long src_length)
+		void _to_type(unsigned int& dest, const char* src, unsigned long src_length)
 		{
 			dest = (unsigned)strtoul(src, NULL, 10);
+		}
+
+		template<>
+		void _to_type(short& dest, const char* src, unsigned long src_length)
+		{
+			dest = (short)strtol(src, NULL, 10);
+		}
+
+		template<>
+		void _to_type(unsigned short& dest, const char* src, unsigned long src_length)
+		{
+			dest = (unsigned short)strtoul(src, NULL, 10);
 		}
 
 		template<> 
