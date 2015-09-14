@@ -229,7 +229,7 @@ namespace sqler
 
 
 		//取结果集的一行到args中
-		//返回值：true成功取出，false没有结果可取。传入的本地参数数目，必须小于等于sql语句中查询出的列数目。
+		//返回值：true成功取出，false没有结果可取。传入的本地参数数目，必须小于等于sql语句中查询出的列数目，否则抛出异常。
 		template<typename... Args>
 		bool fetch_row(Args&... args)
 		{
@@ -280,8 +280,7 @@ namespace sqler
 		int format_sql_str(std::string& sql_str, int last_read_pos) { return 0; }
 
 
-		//格式化sql str，将'?'替换为arg的值
-		//既然匹配到本函数，则arg一定是最后一个参数，检查'?'跟arg个数是否匹配。 存在arg但不存在'?'，则个数不匹配
+		//格式化sql str，将'?'替换为arg的值。 '?'的数目必须与传入的本地参数数目一致，否则抛出异常。
 		template<typename Arg>
 		int format_sql_str(std::string& sql_str, int& last_read_pos, const Arg& arg)
 		{
