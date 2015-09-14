@@ -147,12 +147,21 @@ namespace sqler
 		template<typename... Args>
 		unsigned long long query(const char* sql_str, const Args&... args)
 		{
+			ENSURE(sql_str != NULL && strlen(sql_str) != 0)(sql_str)(strlen(sql_str)).warn(-1, "sql statement passed can not be empty.");
+
 			free_all_result();
 
 			std::string formated_sql = sql_str;
-
+			int place_holders_count = 0;
+			int args_count = sizeof...(args);
+			for (auto& ele : formated_sql)	
+				if (ele == '?')	
+					++place_holders_count;
+			ENSURE(place_holders_count == args_count)(place_holders_count)(args_count).warn(-1,"arguments passed should be compatiable with placeholders' count in sql.");
+			
 			formated_sql.reserve(256);
-			format_sql_str(formated_sql, 0, args...);
+			int last_read_pos = formated_sql.length()-1;
+			parameter_pack_dummy_wrapper(format_sql_str(formated_sql, last_read_pos, args)...);
 
 			ENSURE(mysql_real_query(my_sql_, formated_sql.c_str(), formated_sql.size()) == 0)(formated_sql).warn(get_error_no(), get_error_msg());
 
@@ -182,7 +191,7 @@ namespace sqler
 			if (res_ == NULL)
 			{
 				unsigned error_no = get_error_no();
-				ENSURE(error_no == 0).warn(error_no, get_error_msg());	//之前的sql语句产生结果集，但store result 发生错误
+				ENSURE(error_no == 0).warn(error_no, get_error_msg());			//之前的sql语句产生结果集，但store result 发生错误
 
 				return 0;														//之前的sql语句不产生结果集
 			}
@@ -214,8 +223,13 @@ namespace sqler
 			has_next_result_ = true;						//复位has_next_result_，假设后续的query会有结果集
 		}
 
+		//使用此函数接收"先参与表达式后解包"出来的参数，绕开编译错误
+		template <typename ... Args>
+		void parameter_pack_dummy_wrapper(const Args&... t) {};
+
+
 		//取结果集的一行到args中
-		//返回值：true成功取出，false没有结果可取。
+		//返回值：true成功取出，false没有结果可取。传入的本地参数数目，必须小于等于sql语句中查询出的列数目。
 		template<typename... Args>
 		bool fetch_row(Args&... args)
 		{
@@ -225,10 +239,14 @@ namespace sqler
 			if (row == NULL)								//res_里的结果集已取完
 				return false;
 
+			int field_count = mysql_num_fields(res_);
+			int args_count = sizeof...(args);
+			ENSURE(args_count <= field_count)(args_count)(field_count).warn(-1, "arguments you passed should be less or equal than fields count selected in sql.");
+
 			unsigned long* field_length = mysql_fetch_lengths(res_);
 			ENSURE(field_length != NULL).warn(get_error_no(), get_error_msg());
-
-			_fetch_row(row, 0, field_length, args...);
+			
+			parameter_pack_dummy_wrapper(_fetch_row(row, --args_count, field_length, args)...);
 
 			return true;
 		}
@@ -245,65 +263,36 @@ namespace sqler
 
 		//fetch_row的具体实现函数。
 		template<typename Arg>
-		void _fetch_row(MYSQL_ROW& row, int field_index, unsigned long* field_len_array, Arg& dest)
+		int _fetch_row(MYSQL_ROW& row, int field_index, unsigned long* field_len_array, Arg& dest)
 		{
+			ENSURE(field_index>=0)(field_index)(field_len_array).warn(-1,"field_index is negative...");
+
 			long field_len = field_len_array[field_index];
 			const char* src;
 			field_len == 0 ? src = NULL : src = row[field_index];
 
 			type_conv_.to_type(dest, src, field_len);
+			return 0;
 		}
-
-
-		//fetch_row的具体实现函数，将行中的列值逐个转换到dests中
-		template<typename Arg, typename... Args>
-		void _fetch_row(MYSQL_ROW& row, int field_index, unsigned long* field_len_array, Arg& dest, Args&... dests)
-		{
-			long field_len = field_len_array[field_index];
-			const char* src;
-			field_len == 0 ? src = NULL : src = row[field_index];
-			
-			type_conv_.to_type(dest, src, field_len);
-			_fetch_row(row, ++field_index, field_len_array, dests...);
-		}
-
 
 		//格式化sql str。为无需参数的sql str所准备。
 		template<typename int=0>
-		void format_sql_str(std::string& sql_str, int last_read_pos){}
+		int format_sql_str(std::string& sql_str, int last_read_pos) { return 0; }
 
 
 		//格式化sql str，将'?'替换为arg的值
 		//既然匹配到本函数，则arg一定是最后一个参数，检查'?'跟arg个数是否匹配。 存在arg但不存在'?'，则个数不匹配
 		template<typename Arg>
-		void format_sql_str(std::string& sql_str, int last_read_pos, const Arg& arg)
+		int format_sql_str(std::string& sql_str, int& last_read_pos, const Arg& arg)
 		{
-			size_t pos = sql_str.find("?", last_read_pos);
-			ENSURE(pos != sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
+			size_t pos = sql_str.rfind("?", last_read_pos);
+			ENSURE(pos != sql_str.npos)(sql_str)(last_read_pos).warn(-1, "can not reverse find '?' from last_read_pos in sql statement.");
 
 			const char* sql_param = type_conv_.to_str(arg);
 			sql_str.replace(pos, 1, sql_param);
-			pos += strlen(sql_param);
+			last_read_pos = pos-1;
 
-			//至此，arg...全部替换完成，如果还有'?'，则'?'和arg...的个数不一致
-			ENSURE(sql_str.find("?", pos) == sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
-		}
-
-
-		//格式化sql str，将'?'替换为arg的值
-		//会检查'?'跟arg个数是否匹配。 既然匹配到本函数，则arg一定存在，如果不存在'?'，则个数不匹配
-		//递归替换args中的每一个参数，直到最后一个参数（最后一个参数时，会匹配为format_sql_str(std::string& sql_str, int last_read_pos, const Arg& arg)）
-		template<typename Arg, typename... Args>
-		void format_sql_str(std::string& sql_str, int last_read_pos, const Arg& arg, const Args&... args)
-		{
-			size_t pos = sql_str.find("?", last_read_pos);
-			ENSURE(pos != sql_str.npos)(sql_str).warn(-1, "placeholders' count in sql str not compatiable with real parameters");
-
-			const char* sql_param = type_conv_.to_str(arg);
-			sql_str.replace(pos, 1, sql_param);
-			pos += strlen(sql_param);				
-
-			format_sql_str(sql_str, pos, args...);
+			return 0;
 		}
 
 	protected:
